@@ -1,0 +1,63 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Уровень контейнеров
+/' skinparam linetype ortho  для прямоугольных связей можно включить '/
+
+Person(U, "Клиент", "Клиент службы доставки")
+Person(M, "Менеджер", "Менеджер службы доставки")
+Person(O, "Курьер", "Курьер службы доставки")
+
+System_Boundary(IS, Delivery Service) {
+  Container(F, Flask-App, "Python-приложение в Colab")
+  ContainerDb(PG, PostgreSQL, "Hasura")
+}
+
+System_Ext(YF, "Yandex Forms", "Клиент для отправки данных")
+System_Ext(TG, Telegram, "Внешняя система TG-уведомлений")
+System_Ext(YD, "Yandex DataLens", "Аналитическая BI-система")
+System_Ext(US, Unisender, "Внешняя система email-уведомлений")
+
+System_Boundary(B, "Внешний шлюз онлайн-оплаты") {
+  ContainerDb(R, Redis, Upstash)
+  ContainerQueue(RMQ, RabbitMQ, Cloudamqp)
+}
+
+Rel(U, YF, "Создать заявку на доставку заказа", HTTP )
+Rel(YF, PG, "Создать заявку на доставку заказа", GraphQL)
+Rel(U, YF, "Оплатить доставку заказа", HTTP)
+Rel(YF, RMQ, "Оплатить доставку заказа", HTTP-хук)
+Rel(RMQ, PG, "Оплатить доставку заказа", HTTP)
+Rel(U, YF, "Отслеживать статус заказа", HTTP)
+Rel(YF, PG, "Отслеживать статус заказа", HTTP)
+Rel(PG, US, "Отслеживать статус заказа", HTTP-хук)
+Rel(US, U, "Отслеживать статус заказа", SMTP)
+Rel(M, F, "Просмотреть заявки на доставку", HTTP )
+Rel(F, PG, "Просмотреть заявки на доставку", PostgreSQL )
+Rel(PG, US, "Отправить уведомление о новой заявке", Http-хук)
+Rel(PG, TG, "Отправить уведомление о новой заявке", Http-хук)
+Rel(US, M, "Отправить уведомление о новой заявке", SMTP)
+Rel(TG, M,  "Отправить уведомление о новой заявке", HTTP-хук)
+Rel(M, F, "Изменить статус заявки по доставке", HTTP)
+Rel(F, PG, "Отправить уведомление о завершении доставки", PostgreSQL)
+Rel(PG, US, "Отправить уведомление о завершении доставки", HTTP-хук)
+Rel(TG, U, "Отправить уведомление о завершении доставки", HTTP-хук)
+Rel(US, U, "Отправить уведомление о завершении доставки", SMTP)
+Rel(M, YD, "Анализировать статистику по клиентам, доставкам, платежам", HTTP)
+Rel(YD, PG, "Получить данные по клиентам, доставкам, платежам", PostgreSQL)
+Rel(YD, R, " Сгенерировать код подтверждения", HTTP-хук)
+Rel(U, R, "Посмотреть код подтверждения", HTTP)
+Rel(YD, RMQ, "Отправить событие о подтверждении оплаты", HTTP)
+Rel(PG, RMQ, "Потреблять событие подтверждения оплаты", HTTP)
+Rel(O, F, "Принимать заявки на доставку", HTTP)
+Rel(O, F, "Просматривать каталог заявок", HTTP)
+Rel(O, F, "Просматривать отдельно взятую заявку", HTTP)
+Rel(M, F, "Просматривать отдельно взятую заявку", HTTP)
+Rel(O, PG, "Просматривать доставки, характеристики по доставке", HTTP)
+Rel(M, PG, "Просматривать доставки, характеристики по доставке", HTTP)
+
+
+SHOW_LEGEND()
+
+@enduml
